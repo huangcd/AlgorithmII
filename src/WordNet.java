@@ -1,6 +1,4 @@
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Set;
+import java.util.*;
 
 /**
  * User: huangcd (huangcd.thu@gmail.com)
@@ -57,17 +55,73 @@ public class WordNet {
             }
         }
 
-        // TODO: need a better checker for rooted DAG
-        DirectedCycle cycle = new DirectedCycle(wordNet);
-        if (cycle.hasCycle()) {
-            throw new IllegalArgumentException("Cycle in wordNet");
+        if (!isRootedDirectedAcylicGraph()) {
+            throw new IllegalArgumentException("Input not a rooted directed acylic graph");
         }
         _sap = new SAP(wordNet);
     }
 
+    public int wordCount()
+    {
+        return synsetArray.size();
+    }
+
+    private boolean isRootedDirectedAcylicGraph() {
+        int root = 0;
+        // get the root element
+        int count = 1;
+        while (true) {
+            Iterator<Integer> adj = wordNet.adj(root).iterator();
+            if (!adj.hasNext()) {
+                break;
+            }
+            root = adj.next();
+            count ++;
+            if (count > wordNet.V())
+            {
+                return false;
+            }
+        }
+        Digraph reverseGraph = wordNet.reverse();
+        AcylicDepthFirstSearch search = new AcylicDepthFirstSearch(reverseGraph);
+        search.init();
+        return search.depthFirstSearchWithAcylicDetect(root) && search.count == reverseGraph.V();
+    }
+
+    private class AcylicDepthFirstSearch {
+        private boolean[] marked;
+        private boolean[] inStack;
+        private Digraph graph;
+        private int count;
+
+        public AcylicDepthFirstSearch(Digraph graph) {
+            this.graph = graph;
+        }
+
+        public void init() {
+            marked = new boolean[graph.V()];
+            inStack = new boolean[graph.V()];
+            count = 0;
+        }
+
+        public boolean depthFirstSearchWithAcylicDetect(int s) {
+            count++;
+            marked[s] = true;
+            inStack[s] = true;
+            for (int v : graph.adj(s)) {
+                if (inStack[v]) {
+                    return false;
+                }
+                depthFirstSearchWithAcylicDetect(v);
+            }
+            inStack[s] = false;
+            return true;
+        }
+    }
+
     public static void main(String[] args) {
-        WordNet wordnet = new WordNet("C:\\Users\\chhuang\\IdeaProjects\\AlgorithmII\\data\\wordnet\\synsets.txt",
-                "C:\\Users\\chhuang\\IdeaProjects\\AlgorithmII\\data\\wordnet\\hypernymsInvalidTwoRoots.txt");
+        WordNet wordnet = new WordNet(".\\data\\wordnet\\synsets.txt",
+                ".\\data\\wordnet\\hypernymsInvalidTwoRoots.txt");
         System.out.println(((Set<String>) wordnet.nouns()).size());
     }
 
@@ -93,7 +147,7 @@ public class WordNet {
      *
      * @param nounA nounA
      * @param nounB nounB
-     * @return
+     * @return sap distance
      */
     public int distance(String nounA, String nounB) {
         validate(nounA);
@@ -107,7 +161,7 @@ public class WordNet {
      *
      * @param nounA nounA
      * @param nounB nounB
-     * @return
+     * @return common ancestor represented by synset
      */
     public String sap(String nounA, String nounB) {
         validate(nounA);
