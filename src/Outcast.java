@@ -10,31 +10,43 @@ public class Outcast {
         this.wordNet = wordNet;
     }
 
-    public String outcast(String[] nouns)
-    {
-        int minDis = Integer.MAX_VALUE;
-        String minString = null;
-        for (String s : nouns)
-        {
-            int dis = 0;
-            for (String d : nouns)
-            {
-                int _dis = wordNet.distance(s, d);
-                if (_dis != -1)
-                {
-                    dis += _dis;
+    public static void main(String[] args) {
+        WordNet wordnet = new WordNet(".\\data\\wordnet\\synsets.txt",
+                ".\\data\\wordnet\\hypernyms.txt");
+        Outcast outcast = new Outcast(wordnet);
+        while (!StdIn.isEmpty()) {
+            System.out.println(outcast.outcast(StdIn.readLine().trim().split(" ")));
+        }
+    }
+
+    public String outcast(String[] nouns) {
+        int maxValue = 1000000;
+        int length = nouns.length;
+        int[][] distances = new int[length][length];
+        for (int i = 0; i < length; i++) {
+            for (int j = i + 1; j < length; j++) {
+                int distance = wordNet.distance(nouns[i], nouns[j]);
+                if (distance == -1) {
+                    distances[i][j] = maxValue;
+                    distances[j][i] = maxValue;
+                } else {
+                    distances[i][j] = distance;
+                    distances[j][i] = distance;
                 }
-                else
-                {
-                    dis += wordNet.wordCount();
-                }
-            }
-            if (dis < minDis)
-            {
-                minDis = dis;
-                minString = s;
             }
         }
-        return minString;
+        int maxDistance = Integer.MIN_VALUE;
+        String maxNoun = null;
+        for (int i = 0; i < length; i++) {
+            int sum = 0;
+            for (int j = 0; j < length; j++) {
+                sum += distances[i][j];
+            }
+            if (sum > maxDistance) {
+                maxDistance = sum;
+                maxNoun = nouns[i];
+            }
+        }
+        return maxNoun;
     }
 }

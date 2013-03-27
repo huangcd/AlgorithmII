@@ -1,4 +1,7 @@
-import java.util.*;
+import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.Set;
+import java.util.Iterator;
 
 /**
  * User: huangcd (huangcd.thu@gmail.com)
@@ -9,7 +12,7 @@ public class WordNet {
     private HashMap<String, ArrayList<Integer>> synsetMap;
     private HashMap<Integer, String> synsetArray;
     private Digraph wordNet;
-    private SAP _sap;
+    private SAP sapInstance;
 
     /**
      * constructor takes the name of the two input files
@@ -56,18 +59,14 @@ public class WordNet {
         }
 
         if (!isRootedDirectedAcylicGraph()) {
-            throw new IllegalArgumentException("Input not a rooted directed acylic graph");
+            throw new IllegalArgumentException(
+                    "Input not a rooted directed acylic graph");
         }
-        _sap = new SAP(wordNet);
-    }
-
-    public int wordCount()
-    {
-        return synsetArray.size();
+        sapInstance = new SAP(wordNet);
     }
 
     private boolean isRootedDirectedAcylicGraph() {
-        int root = 0;
+        int root = synsetArray.size() - 1;
         // get the root element
         int count = 1;
         while (true) {
@@ -76,7 +75,7 @@ public class WordNet {
                 break;
             }
             root = adj.next();
-            count ++;
+            count++;
             if (count > wordNet.V())
             {
                 return false;
@@ -85,7 +84,9 @@ public class WordNet {
         Digraph reverseGraph = wordNet.reverse();
         AcylicDepthFirstSearch search = new AcylicDepthFirstSearch(reverseGraph);
         search.init();
-        return search.depthFirstSearchWithAcylicDetect(root) && search.count == reverseGraph.V();
+        if (search.depthFirstSearchWithAcylicDetect(root))
+            return search.count == reverseGraph.V();
+        return false;
     }
 
     private class AcylicDepthFirstSearch {
@@ -112,7 +113,9 @@ public class WordNet {
                 if (inStack[v]) {
                     return false;
                 }
-                depthFirstSearchWithAcylicDetect(v);
+                if (!marked[v]) {
+                    depthFirstSearchWithAcylicDetect(v);
+                }
             }
             inStack[s] = false;
             return true;
@@ -121,7 +124,7 @@ public class WordNet {
 
     public static void main(String[] args) {
         WordNet wordnet = new WordNet(".\\data\\wordnet\\synsets.txt",
-                ".\\data\\wordnet\\hypernymsInvalidTwoRoots.txt");
+                ".\\data\\wordnet\\hypernyms300k.txt");
         System.out.println(((Set<String>) wordnet.nouns()).size());
     }
 
@@ -152,12 +155,12 @@ public class WordNet {
     public int distance(String nounA, String nounB) {
         validate(nounA);
         validate(nounB);
-        return _sap.length(synsetMap.get(nounA), synsetMap.get(nounB));
+        return sapInstance.length(synsetMap.get(nounA), synsetMap.get(nounB));
     }
 
     /**
-     * a synset (second field of synsets.txt) that is the common ancestor of nounA and nounB
-     * in a shortest ancestral path (defined below)
+     * a synset (second field of synsets.txt) that is the common ancestor of
+     * nounA and nounB in a shortest ancestral path (defined below)
      *
      * @param nounA nounA
      * @param nounB nounB
@@ -166,7 +169,8 @@ public class WordNet {
     public String sap(String nounA, String nounB) {
         validate(nounA);
         validate(nounB);
-        return synsetArray.get(_sap.ancestor(synsetMap.get(nounA), synsetMap.get(nounB)));
+        return synsetArray.get(
+                sapInstance.ancestor(synsetMap.get(nounA), synsetMap.get(nounB)));
     }
 
     private void validate(String noun) {
