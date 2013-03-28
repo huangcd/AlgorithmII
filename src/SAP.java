@@ -1,5 +1,4 @@
 import java.util.ArrayList;
-import java.util.HashSet;
 
 /**
  * User: huangcd (huangcd.thu@gmail.com)
@@ -8,7 +7,6 @@ import java.util.HashSet;
  */
 public class SAP {
     private Digraph graph;
-    private Digraph rev;
 
     /**
      * constructor takes a digraph (not necessarily a DAG)
@@ -16,8 +14,7 @@ public class SAP {
      * @param G a digraph
      */
     public SAP(Digraph G) {
-        graph = G;
-        rev = graph.reverse();
+        graph = new Digraph(G);
     }
 
     public static void main(String[] args) {
@@ -33,10 +30,8 @@ public class SAP {
         }
     }
 
-    private void validate(int i)
-    {
-        if (i < 0 || i >= graph.V())
-        {
+    private void validate(int i) {
+        if (i < 0 || i >= graph.V()) {
             throw new IndexOutOfBoundsException();
         }
     }
@@ -55,78 +50,23 @@ public class SAP {
     }
 
     private int[] internalVisit(Iterable<Integer> vs, Iterable<Integer> ws) {
-        final int INFINITE = Integer.MAX_VALUE;
-        // graph has been changed
-        if (rev.E() != graph.E())
-        {
-            rev = graph.reverse();
-        }
-        int size = graph.V();
-        boolean[] marked = new boolean[size * 2];
-        int[] dist = new int[size * 2];
-        int[] edgeTo = new int[size * 2];
-        for (int i = 0; i < size * 2; i++) {
-            dist[i] = INFINITE;
-        }
-        HashSet<Integer> destinations = new HashSet<Integer>();
-        for (int w : ws) {
-            validate(w);
-            destinations.add(w);
-        }
-        Queue<Integer> queue = new Queue<Integer>();
-        for (int v : vs) {
-            validate(v);
-            dist[v] = 0;
-            marked[v] = true;
-            queue.enqueue(v);
-        }
-        while (!queue.isEmpty()) {
-            int s = queue.dequeue();
-            if (destinations.contains(s % size)) {
-                int anc = s;
-                while (anc >= size)
-                {
-                    anc = edgeTo[anc];
-                }
-                return new int[]{anc, dist[s]};
-            }
-            // not yet reverse
-            if (s < size) {
-                for (int d : graph.adj(s)) {
-                    // not visited yet
-                    if (!marked[d]) {
-                        marked[d] = true;
-                        dist[d] = dist[s] + 1;
-                        edgeTo[d] = s;
-                        queue.enqueue(d);
-                    }
-                }
-                // reverse from edge (d -> s)
-                for (int revD : rev.adj(s)) {
-                    int d = revD + size;
-                    if (!marked[d]) {
-                        marked[d] = true;
-                        dist[d] = dist[s] + 1;
-                        edgeTo[d] = s;
-                        queue.enqueue(d);
-                    }
-                }
-            }
-            // already reversed
-            else {
-                for (int revD : rev.adj(s - size))
-                {
-                    int d = revD + size;
-                    if (!marked[d]) {
-                        marked[d] = true;
-                        dist[d] = dist[s] + 1;
-                        edgeTo[d] = s;
-                        queue.enqueue(d);
-                    }
+        BreadthFirstDirectedPaths bfsv = new BreadthFirstDirectedPaths(graph, vs);
+        BreadthFirstDirectedPaths bfsw = new BreadthFirstDirectedPaths(graph, ws);
+        int minDistance = Integer.MAX_VALUE;
+        int minIndex = -1;
+        for (int i = 0, size = graph.V(); i < size; i++) {
+            if (bfsv.hasPathTo(i) && bfsw.hasPathTo(i)) {
+                int distance = bfsv.distTo(i) + bfsw.distTo(i);
+                if (distance < minDistance) {
+                    minIndex = i;
+                    minDistance = distance;
                 }
             }
         }
-        return new int[]{-1, -1};
+        if (minDistance == Integer.MAX_VALUE) {
+            return new int[]{-1, -1};
+        }
+        return new int[]{minIndex, minDistance};
     }
 
     /**

@@ -29,6 +29,7 @@
         </SOURCES>
       </library>
     </orderEntry>
+    <orderEntry type="library" name="JUnit" level="application" />
   </component>
 </module>
 
